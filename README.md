@@ -79,5 +79,5 @@ Priority 的優先順序排序，若有 Priority 相同的 process，則採用 R
 queue 中排在第一位的 process，若 ready queue 當中 process 的
 Priority 較小，則可以奪取 CPU 資源，原 process 則放回到 ready 
 queue，並再根據 Priority 將 ready queue 排序好。
-# 方法七：ALL 
+### 方法七：ALL 
 方法七為方法一到六的集大成。
