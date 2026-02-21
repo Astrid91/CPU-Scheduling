@@ -1,127 +1,151 @@
-# Page Replacement Simulator (FIFO / LRU / LFU / MFU / LFU+LRU)
+# CPU Scheduling Simulator
 
-這是一個用 **Python** 實作的「分頁置換（Page Replacement）」模擬器，能根據輸入檔案指定的方法與頁框（frame）大小，逐步模擬每次 page reference 後的記憶體頁框內容，並輸出每步是否發生 Page Fault，以及統計：
-- **Page Fault**
-- **Page Replaces**
-- **Page Frames**
-
-支援方法：
-1. FIFO（First-In First-Out）
-2. LRU（Least Recently Used）
-3. LFU（Least Frequently Used）
-4. MFU（Most Frequently Used）
-5. LFU + LRU（同頻率時用 LRU 行為/並結合 LRU 的移動方式）
-6. 一次輸出 1~5 全部方法（同一組輸入）
+這份程式是一個 **CPU 排程演算法模擬器**，可讀取指定格式的輸入檔（`.txt`），依照選擇的排程方法模擬 CPU 執行流程（甘特圖），並輸出每個行程（process）的 **Waiting Time** 與 **Turnaround Time** 到 `out_檔名.txt`。
 
 ---
 
-## 專案結構與輸出
+## 功能總覽
 
-### 輸入檔
-程式會要求你輸入檔名（不含副檔名），並自動加上 `.txt` 讀取。
+支援以下排程演算法：
 
-例如：
-請輸入檔案名稱:
-test
-
-程式會讀取 `test.txt`
-
-### 輸出檔
-輸出檔名會自動加上 `out_` 前綴，並以 **append** 方式寫入：
-
-- 輸入：`test.txt`
-- 輸出：`out_test.txt`
-
-> 注意：因為 `WriteFile()` 使用 `"a"` 模式（附加寫入），同一個輸出檔重跑會一直累加內容；若想每次重跑都重新產生，請自行刪除 `out_*.txt` 或把 `"a"` 改為 `"w"`。
+- **FCFS (First Come First Serve)**：先到先服務（非搶占）
+- **RR (Round Robin)**：時間片輪轉（搶占，需 time slice）
+- **SJF (Shortest Job First)**：最短工作優先（非搶占）
+- **SRTF (Shortest Remaining Time First)**：最短剩餘時間優先（搶占）
+- **HRRN (Highest Response Ratio Next)**：最高回應比優先（非搶占）
+- **PPRR (Priority Round Robin)**：具優先權的 RR（搶占，需 time slice）
+- **All (method = 7)**：一次輸出上述 6 種演算法結果
 
 ---
 
-## 輸入格式（Input Format）
+## 程式流程
 
-輸入檔共兩行：
+1. 從輸入檔讀取：
+   - `method`：排程方法代號
+   - `timeSlice`：RR/PPRR 使用的時間片
+   - process 資料：`[PID, CPU Burst, Arrival Time, Priority]`
+2. 依 `method` 呼叫對應演算法產生：
+   - `result`：甘特圖（每個時間單位 CPU 正在跑的 PID）
+   - `ans`：每個 PID 的 turnaround / waiting 結果
+3. 將結果寫入 `out_檔名.txt`
 
-### 第 1 行：方法與頁框大小
-格式：
+---
+
+## 輸入檔格式
+
+輸入檔副檔名為 `.txt`，檔案內容格式如下：
+
+### 第 1 行
 ```scheme
-<method> <size>
+<method> <timeSlice>
 ```
 
-- `method`: 1~6
-- `size`: page frames 的容量（可放幾個頁）
+- `method`：1~7
+- `timeSlice`：RR / PPRR 使用；若不是 RR/PPRR 仍需給一個整數（可填 0 或任意值）
 
-範例：
+### 第 2 行
+表頭（程式會讀掉，不影響）
+```scheme
+ID CPU Burst Arrival Time Priority
+```
+
+### 第 3 行起：每個 process 一行
+```scheme
+<PID> <CPU_Burst> <Arrival_Time> <Priority>
+```
+
+#### 範例
 ```scheme
 2 3
+ID CPU Burst Arrival Time Priority
+1 5 0 2
+2 3 1 1
+3 8 2 3
 ```
-
-代表使用 LRU，page frame size = 3
-
-### 第 2 行：reference string
-程式會逐字元讀取這一行，把每個字元當作一次 page reference。
-
-範例：
-```scheme
-70120304230321201701
-```
-
 
 ---
 
-## 執行方式（How to Run）
+## 方法代號對照表
 
-### 1) 直接執行
+| method | 演算法 |
+|-------:|--------|
+| 1 | FCFS |
+| 2 | RR |
+| 3 | SJF |
+| 4 | SRTF |
+| 5 | HRRN |
+| 6 | PPRR (Priority RR) |
+| 7 | All（一次輸出 FCFS/RR/SJF/SRTF/HRRN/PPRR） |
+
+---
+
+## 輸出說明
+
+輸出檔名固定為：
+
+- `out_<原本輸入檔名>.txt`
+
+內容包含：
+
+1. **甘特圖（Gantt Chart）**
+   - 每個時間單位輸出一個字元（由 PID 映射而來）
+   - 程式使用 `serial` 將數字 PID 轉成 `0-9A-Z-` 等字元
+   - 當 CPU idle 時，程式使用 `36`，映射成 `'-'`
+
+2. **Waiting Time**
+3. **Turnaround Time**
+
+若 `method = 7`，會依序印出 6 種排程方法的甘特圖與綜合表格（Waiting/Turnaround）。
+
+---
+
+## 執行方式
+
+確保你的環境有 Python 3。
+
 ```bash
 python main.py
 ```
-### 2) 依提示輸入檔名（不含 .txt）
+
+程式會提示你輸入檔名（不含 .txt）：
+
 ```scheme
 請輸入檔案名稱:
-test
+input
 ```
+
+程式會自動讀取 `input.txt`，並輸出 `out_input.txt`。
 
 ---
 
-## 輸出格式（Output Format）
+## 資料結構約定（process row）
 
-輸出內容會先印出方法標題，接著每一行代表一次 reference：
-- 左側：本次 reference 的 page（字元）
-- 中間：目前頁框內容（由 `ans[i]` 印出）
-- 右側：若發生 page fault，印 `F`
+程式使用 list 表示每個 process：
 
-最後一行印統計：
-```scheme
-Page Fault = X  Page Replaces = Y  Page Frames = Z
-```
+- `row[0]`：PID
+- `row[1]`：CPU Burst（在 SRTF/RR/PPRR 會被遞減；原始值會暫存）
+- `row[2]`：Arrival Time
+- `row[3]`：Priority（PPRR 使用，數字越小代表優先權越高）
+- `row[4]`：Finish Time（程式後續補上，初始為 -1；HRRN 時也會暫作 ratio 欄位）
 
 ---
 
-## 各方法行為摘要（Algorithms）
+## 主要函式簡介
 
-這份程式的 page list 會經常把「最新加入/最新使用」的頁移到 page[0]，並用位移方式維護順序。
+- `Non_preemptive(data, method)`
+  - 處理 **FCFS / SJF / HRRN**（非搶占）
 
-### (1) FIFO (`method1`)
-- 命中：不動 page 順序
-- 缺頁：
-  - 若 frame 未滿：直接加入
-  - 若 frame 已滿：視為替換（Page_Replaces +1）
-- 無論缺頁或加入，都會把新頁放到 `page[0]`，其餘往後推
+- `SRTF(data)`
+  - 處理 **SRTF**（搶占）
 
-### (2) LRU (`method2`)
-- 命中：把該頁移到最前面（`page[0]`）
-- 缺頁：
-  - frame 未滿：加入並放最前
-  - frame 已滿：從過去 reference 中找出「最久沒被用到」的頁進行替換（透過回掃 lines 找最小的最後出現位置）
+- `RR(data, timeSlice)`
+  - 處理 **RR**（搶占 + time slice）
 
-### (3) LFU (`method3_4` with method==3)
-- 維護 `f[]`：記錄每個 page 出現次數（以 `int(lines[i])` 當 index）
-- 缺頁且 frame 已滿：
-  - 找 frame 內使用次數最少的頁替換
-  - 被替換頁的次數會被重設為 0
+- `PPRR(data, timeSlice)`
+  - 處理 **Priority RR**（優先權搶占 + time slice）
 
-### (4) MFU (`method3_4` with method==4)
-- 與 LFU 類似，但替換「使用次數最多」的頁
+- `ReadFile(fileName)` /` WriteFile(...)` / `WriteFile_7(...)`
+  - 負責 I/O
 
-### (5) LFU + LRU (`method5`)
-- 也維護 `f[]` 次數
-- 命中：同 LRU，把命中頁移到最前
-- 缺頁且 frame 已滿：以 LFU 找出最少使用次數的頁替換（並重設其計數），新頁放最前
+- `HandleMethod(data, method, timeSlice)`
+  - 統一分派 method 與輸出格式處理
